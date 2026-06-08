@@ -1,0 +1,107 @@
+type Message = record {
+    role : text;
+    content : text;
+    timestamp : nat64;
+};
+
+type Conversation = record {
+    id : text;
+    messages : vec Message;
+    created_at : nat64;
+    updated_at : nat64;
+};
+
+type AgentResponse = record {
+    content : text;
+    provider_name : text;
+    tokens_used : nat32;
+};
+
+type ToolResult = record {
+    name : text;
+    success : bool;
+    output : text;
+    cost_cycles : nat64;
+};
+
+type ScheduledTask = record {
+    id : text;
+    cron_expr : text;
+    payload : text;
+    next_run : nat64;
+    enabled : bool;
+};
+
+type SopEntry = record {
+    id : text;
+    cron_expr : text;
+    prompt : text;
+    last_run : nat64;
+    enabled : bool;
+    description : text;
+};
+
+type EconomicsStats = record {
+    balance : nat64;
+    operational_mode : text;
+    can_execute_outcall : bool;
+    estimated_cycles_per_day : nat64;
+};
+
+service : {
+    chat : (message : text) -> (Result : variant { Ok : text; Err : text });
+
+    chat_in_conversation : (conversation_id : text, message : text) -> (Result : variant { Ok : text; Err : text });
+
+    get_history : (limit : nat32) -> (vec Message) query;
+
+    get_conversation : (conversation_id : text) -> (opt Conversation) query;
+
+    list_conversations : () -> (vec text) query;
+
+    conversation_count : () -> (nat32) query;
+
+    cycles_balance : () -> (nat64) query;
+
+    get_economics_stats : () -> (EconomicsStats) query;
+
+    operational_mode : () -> (text) query;
+
+    set_default_conversation : (conversation_id : text) -> (Result : variant { Ok : null; Err : text });
+
+    clear_history : (conversation_id : text) -> (Result : variant { Ok : null; Err : text });
+
+    add_sop : (id : text, cron_expr : text, prompt : text, description : text) -> (Result : variant { Ok : null; Err : text });
+
+    remove_sop : (id : text) -> (Result : variant { Ok : null; Err : text });
+
+    list_sops : () -> (vec SopEntry) query;
+
+    sop_count : () -> (nat64) query;
+
+    set_sop_enabled : (id : text, enabled : bool) -> (Result : variant { Ok : null; Err : text });
+
+    recall : (key : text) -> (ToolResult);
+
+    store : (key : text, value : text) -> (ToolResult);
+
+    forget : (key : text) -> (ToolResult);
+
+    list_memory_keys : () -> (vec text) query;
+
+    schedule_task : (id : text, cron_expr : text, payload : text) -> (ToolResult);
+
+    cancel_task : (id : text) -> (ToolResult);
+
+    list_tasks : () -> (vec ScheduledTask) query;
+
+    send_notification : (message : text) -> (ToolResult);
+
+    set_owner_principal : (principal : principal) -> (Result : variant { Ok : null; Err : text });
+
+    whoami : () -> (principal) query;
+
+    get_transform_func_name : () -> (text) query;
+
+    handle_notification : (payload : blob) -> (Result : variant { Ok : null; Err : text });
+}

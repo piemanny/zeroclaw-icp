@@ -1,0 +1,10 @@
+[workspace]
+members = [
+    "canisters/vault",
+    "canisters/agent",
+]
+
+[profile.release]
+opt-level = "z"
+lto = true
+strip = true

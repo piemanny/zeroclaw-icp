@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "canisters": {
+    "vault": {
+      "type": "rust",
+      "package": "vault",
+      "candid": "canisters/vault/vault.did"
+    },
+    "agent": {
+      "type": "rust",
+      "package": "agent",
+      "candid": "canisters/agent/agent.did"
+    },
+    "frontend": {
+      "type": "assets",
+      "source": ["canisters/frontend/dist"]
+    }
+  },
+  "networks": {
+    "local": {
+      "bind": "127.0.0.1:8000",
+      "type": "ephemeral"
+    }
+  }
+}

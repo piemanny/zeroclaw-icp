@@ -1,0 +1,9 @@
+type Result = variant { Ok : null; Err : text };
+
+service : {
+    set_agent_principal : (principal) -> (Result);
+    get_agent_principal : () -> (opt principal) query;
+    store_key : (name : text, value : blob) -> (Result);
+    get_key : (name : text) -> (Result);
+    remove_key : (name : text) -> (Result);
+}
