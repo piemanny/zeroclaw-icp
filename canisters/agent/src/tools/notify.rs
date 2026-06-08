@@ -39,7 +39,7 @@ pub fn send_notification(message: &str) -> ToolResult {
     let _ = ic_cdk::notify(
         notification.recipient,
         "handle_notification",
-        &(payload,),
+        (payload,),
     );
 
     ToolResult::ok("send_notification", "Notification sent", COST)

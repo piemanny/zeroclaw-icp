@@ -41,13 +41,19 @@ impl IcLlmProvider {
     }
 
     pub async fn complete(&self, prompt: &str, _max_tokens: u32) -> Result<LlmResponse, String> {
-        let content = ic_llm::prompt(self.model, prompt).await;
-
         let model_name = match self.model {
             Model::Llama3_1_8B => "Llama3.1-8B".to_string(),
             Model::Qwen3_32B => "Qwen3-32B".to_string(),
             Model::Llama4Scout => "Llama4-Scout".to_string(),
         };
+
+        let model_for_prompt = match self.model {
+            Model::Llama3_1_8B => Model::Llama3_1_8B,
+            Model::Qwen3_32B => Model::Qwen3_32B,
+            Model::Llama4Scout => Model::Llama4Scout,
+        };
+
+        let content = ic_llm::prompt(model_for_prompt, prompt).await;
 
         Ok(LlmResponse {
             content,
@@ -57,11 +63,11 @@ impl IcLlmProvider {
         })
     }
 
-    pub fn name(&self) -> &str {
+    pub fn name(&self) -> String {
         match self.model {
-            Model::Llama3_1_8B => "ic-llm/Llama3.1-8B",
-            Model::Qwen3_32B => "ic-llm/Qwen3-32B",
-            Model::Llama4Scout => "ic-llm/Llama4-Scout",
+            Model::Llama3_1_8B => "ic-llm/Llama3.1-8B".to_string(),
+            Model::Qwen3_32B => "ic-llm/Qwen3-32B".to_string(),
+            Model::Llama4Scout => "ic-llm/Llama4-Scout".to_string(),
         }
     }
 }

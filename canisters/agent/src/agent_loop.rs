@@ -2,7 +2,6 @@ use crate::memory;
 use crate::outcall::AnthropicMessage;
 use crate::provider::{select_provider_for_task, Backend, Complexity};
 use crate::provider::{execute_with_https_outcall as execute_https, execute_with_ic_llm};
-use ic_llm::Model;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 static SESSION_COUNTER: AtomicU64 = AtomicU64::new(0);
@@ -89,7 +88,7 @@ pub async fn run_single_turn(
             build_system_prompt(),
             memory::format_history_for_llm(conversation_id)
         );
-        execute_ic_llm(model, &prompt, 1000).await?
+        execute_with_ic_llm(model, &prompt, 1000).await?
     } else {
         let (messages, system) = build_anthropic_messages(conversation_id, user_message);
         let api_key = std::env::var("ANTHROPIC_API_KEY").ok();
@@ -142,7 +141,7 @@ pub async fn run_agent_turn(
             build_system_prompt(),
             memory::format_history_for_llm(conversation_id)
         );
-        execute_ic_llm(model, &prompt, 1000).await?
+        execute_with_ic_llm(model, &prompt, 1000).await?
     } else {
         let (messages, system) = build_anthropic_messages(conversation_id, user_message);
         let api_key = std::env::var("ANTHROPIC_API_KEY").ok();

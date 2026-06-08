@@ -724,6 +724,7 @@ dependencies = [
  "ic-cdk 0.17.2",
  "ic-stable-structures",
  "serde",
+ "serde_json",
 ]
 
 [[package]]

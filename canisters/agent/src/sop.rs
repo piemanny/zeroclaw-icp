@@ -95,16 +95,17 @@ pub fn remove_sop(id: &str) -> Result<(), String> {
 }
 
 pub fn get_sop(id: &str) -> Option<SopEntry> {
-    with_state(|state| state.sops.get(&id.to_string()).cloned())
+    with_state(|state| state.sops.get(&id.to_string()))
 }
 
 pub fn list_sops() -> Vec<SopEntry> {
-    with_state(|state| state.sops.values().cloned().collect())
+    with_state(|state| state.sops.values().collect())
 }
 
 pub fn update_last_run(id: &str) {
     with_state_mut(|state| {
-        if let Some(mut sop) = state.sops.get(&id.to_string()).cloned() {
+        if let Some(sop) = state.sops.get(&id.to_string()) {
+            let mut sop = sop;
             sop.last_run = time();
             state.sops.insert(id.to_string(), sop);
         }
@@ -112,29 +113,26 @@ pub fn update_last_run(id: &str) {
 }
 
 pub fn set_sop_enabled(id: &str, enabled: bool) -> Result<(), String> {
-    with_state_mut(|state| {
-        if let Some(mut sop) = state.sops.get(&id.to_string()).cloned() {
+    let result: Result<(), String> = with_state_mut(|state| {
+        if let Some(sop) = state.sops.get(&id.to_string()) {
+            let mut sop = sop;
             sop.enabled = enabled;
             state.sops.insert(id.to_string(), sop);
+            Ok(())
         } else {
-            return Err(format!("SOP '{}' not found", id));
+            Err(format!("SOP '{}' not found", id))
         }
     });
-    Ok(())
+    result
 }
 
 pub fn sop_count() -> usize {
-    with_state(|state| state.sops.keys().len())
+    with_state(|state| state.sops.keys().count())
 }
 
 pub fn get_enabled_sops() -> Vec<SopEntry> {
     with_state(|state| {
-        state
-            .sops
-            .values()
-            .filter(|s| s.enabled)
-            .cloned()
-            .collect()
+        state.sops.values().filter(|s| s.enabled).collect()
     })
 }
 

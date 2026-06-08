@@ -110,7 +110,8 @@ pub fn add_message(conversation_id: &str, role: &str, content: &str) {
             timestamp,
         };
         match state.conversations.get(&conversation_id.to_string()) {
-            Some(mut conv) => {
+            Some(conv) => {
+                let mut conv = conv;
                 if conv.messages.len() >= MAX_MESSAGES_PER_CONV as usize {
                     conv.messages.remove(0);
                 }
@@ -132,7 +133,7 @@ pub fn add_message(conversation_id: &str, role: &str, content: &str) {
 }
 
 pub fn get_conversation(conversation_id: &str) -> Option<Conversation> {
-    with_state(|state| state.conversations.get(&conversation_id.to_string()).cloned())
+    with_state(|state| state.conversations.get(&conversation_id.to_string()))
 }
 
 pub fn get_history(conversation_id: &str, limit: usize) -> Vec<Message> {
@@ -141,27 +142,19 @@ pub fn get_history(conversation_id: &str, limit: usize) -> Vec<Message> {
             .conversations
             .get(&conversation_id.to_string())
             .map(|conv| {
-                conv.messages
-                    .iter()
-                    .rev()
-                    .take(limit)
-                    .cloned()
-                    .collect::<Vec<_>>()
-                    .into_iter()
-                    .rev()
-                    .cloned()
-                    .collect()
+                let msgs: Vec<_> = conv.messages.iter().rev().take(limit).cloned().collect();
+                msgs.into_iter().rev().collect()
             })
             .unwrap_or_default()
     })
 }
 
 pub fn list_conversations() -> Vec<String> {
-    with_state(|state| state.conversations.keys().cloned().collect())
+    with_state(|state| state.conversations.keys().collect())
 }
 
 pub fn conversation_count() -> u32 {
-    with_state(|state| state.conversations.keys().len() as u32)
+    with_state(|state| state.conversations.keys().count() as u32)
 }
 
 pub fn format_history_for_llm(conversation_id: &str) -> String {
@@ -177,7 +170,6 @@ pub fn get_memory_value(key: &str) -> String {
         state
             .kv_store
             .get(&key.to_string())
-            .cloned()
             .unwrap_or_default()
     })
 }
@@ -195,5 +187,5 @@ pub fn delete_memory_value(key: &str) {
 }
 
 pub fn list_memory_keys() -> Vec<String> {
-    with_state(|state| state.kv_store.keys().cloned().collect())
+    with_state(|state| state.kv_store.keys().collect())
 }

@@ -1,6 +1,6 @@
 use crate::outcall;
 use crate::tools::result::ToolResult;
-use ic_cdk::api::management_canister::http_request::{CanisterHttpRequestArgument, HttpHeader};
+use ic_cdk::api::management_canister::http_request::{CanisterHttpRequestArgument, HttpHeader, HttpMethod};
 
 const COST: u64 = 500_000_000;
 
@@ -25,9 +25,9 @@ pub async fn fetch_url(url: &str, method: &str, body: Option<&str>) -> ToolResul
     ];
 
     let http_method = if method == "GET" {
-        ic_cdk::api::management_canister::http_request::HttpMethod::GET
+        HttpMethod::GET
     } else {
-        ic_cdk::api::management_canister::http_request::HttpMethod::POST
+        HttpMethod::POST
     };
 
     let request = CanisterHttpRequestArgument {
@@ -35,10 +35,12 @@ pub async fn fetch_url(url: &str, method: &str, body: Option<&str>) -> ToolResul
         method: http_method,
         headers,
         body: body_bytes,
+        max_response_bytes: Some(10240),
         transform: None,
+        ..Default::default()
     };
 
-    match ic_cdk::api::management_canister::http_request::http_request(request, 10240).await {
+    match ic_cdk::api::management_canister::http_request::http_request(request, 10240u128).await {
         Ok((resp,)) => {
             let body_str = String::from_utf8_lossy(&resp.body).to_string();
             ToolResult::ok("fetch_url", &body_str, COST)

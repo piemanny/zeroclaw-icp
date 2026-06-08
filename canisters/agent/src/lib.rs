@@ -70,7 +70,7 @@ fn tick_economics() {
                 let _ = ic_cdk::notify(
                     owner,
                     "handle_notification",
-                    &(msg.into_bytes(),),
+                    (msg.into_bytes(),),
                 );
             }
         }
@@ -81,7 +81,7 @@ fn tick_economics() {
                 let _ = ic_cdk::notify(
                     owner,
                     "handle_notification",
-                    &(msg.into_bytes(),),
+                    (msg.into_bytes(),),
                 );
             }
         }

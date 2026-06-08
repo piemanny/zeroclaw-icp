@@ -1,4 +1,4 @@
-use ic_cdk::api::management_canister::http_request::{CanisterHttpRequestArgument, HttpHeader, HttpResponse};
+use ic_cdk::api::management_canister::http_request::{CanisterHttpRequestArgument, HttpHeader, HttpResponse, HttpMethod};
 use sha2::{Digest, Sha256};
 
 const ANTHROPIC_API_URL: &str = "https://api.anthropic.com/v1/messages";
@@ -136,34 +136,12 @@ pub async fn anthropic_completion(
 
     let request = CanisterHttpRequestArgument {
         url: ANTHROPIC_API_URL.to_string(),
-        method: ic_cdk::api::management_canister::http_request::HttpMethod::POST,
+        method: HttpMethod::POST,
         headers,
         body: Some(body_json.into_bytes()),
-        transform: Some(ic_cdk::api::management_canister::http_request::TransformContext {
-            function: ic_cdk::api::management_canister::http_request::TransformFunc({
-                let func = |args: ic_cdk::api::management_canister::http_request::TransformArgs| {
-                    let response = args.response;
-                    let mut filtered_headers: Vec<HttpHeader> = Vec::new();
-                    let non_deterministic = [
-                        "x-request-id", "date", "cf-ray", "cf-cache-status",
-                        "x-ratelimit-limit", "x-ratelimit-remaining", "x-ratelimit-reset",
-                    ];
-                    for header in response.headers.iter() {
-                        let key_lower = header.name.to_lowercase();
-                        if !non_deterministic.contains(&key_lower.as_str()) {
-                            filtered_headers.push(header.clone());
-                        }
-                    }
-                    HttpResponse {
-                        status: response.status,
-                        headers: filtered_headers,
-                        body: response.body,
-                    }
-                };
-                func
-            }),
-            context: vec![],
-        }),
+        max_response_bytes: Some(MAX_RESPONSE_BYTES),
+        transform: None,
+        ..Default::default()
     };
 
     let response: HttpResponse = ic_cdk::api::management_canister::http_request::http_request(
@@ -231,10 +209,12 @@ pub async fn openai_completion(
 
     let request = CanisterHttpRequestArgument {
         url: OPENAI_API_URL.to_string(),
-        method: ic_cdk::api::management_canister::http_request::HttpMethod::POST,
+        method: HttpMethod::POST,
         headers,
         body: Some(body_json.into_bytes()),
+        max_response_bytes: Some(MAX_RESPONSE_BYTES),
         transform: None,
+        ..Default::default()
     };
 
     let response: HttpResponse = ic_cdk::api::management_canister::http_request::http_request(
