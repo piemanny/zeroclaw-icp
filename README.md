@@ -1,4 +1,4 @@
-# ZeroClaw ICP
+# 🦀 ZeroClaw ICP
 
 **Persistent. Autonomous. Self-funding. Decentralized.**
 Deploy AI agents on the Internet Computer that run forever — no server, no VPS, no maintenance.
@@ -7,6 +7,7 @@ Deploy AI agents on the Internet Computer that run forever — no server, no VPS
 [![ICP](https://img.shields.io/badge/platform-Internet%20Computer-blue)](https://internetcomputer.org)
 [![Rust](https://img.shields.io/badge/language-Rust-orange)](https://www.rust-lang.org)
 [![Built with ic-cdk](https://img.shields.io/badge/built%20with-ic--cdk-purple)](https://crates.io/crates/ic-cdk)
+[![Status: Alpha](https://img.shields.io/badge/status-alpha-red)](https://github.com/piemanny/zeroclaw-icp/releases)
 
 ---
 
