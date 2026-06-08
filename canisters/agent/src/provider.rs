@@ -1,13 +1,6 @@
-use crate::outcall::{self, anthropic_completion, openai_completion};
-use crate::transform::transform;
+use crate::outcall::{anthropic_completion, openai_completion, AnthropicMessage, OpenAiMessage};
+use ic_llm::Model;
 use serde::{Deserialize, Serialize};
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum Model {
-    Llama3_1_8B,
-    Qwen3_32B,
-    Llama4Scout,
-}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Backend {
@@ -15,13 +8,7 @@ pub enum Backend {
     OpenAI,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum Provider {
-    IcLlm(Model),
-    HttpsOutcall(Backend),
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum Complexity {
     Low,
     High,
@@ -39,7 +26,7 @@ pub struct Task {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LlmResponse {
     pub content: String,
-    pub provider: Provider,
+    pub provider: String,
     pub model: String,
     pub tokens_used: usize,
 }
@@ -53,38 +40,21 @@ impl IcLlmProvider {
         Self { model }
     }
 
-    pub async fn complete(&self, prompt: &str, max_tokens: u32) -> Result<LlmResponse, String> {
-        use ic_llm_interface::{CanisterMetrics, InferenceRequest, InferenceResponse, LlmCanister};
+    pub async fn complete(&self, prompt: &str, _max_tokens: u32) -> Result<LlmResponse, String> {
+        let content = ic_llm::prompt(self.model, prompt).await;
 
-        let request = InferenceRequest {
-            prompt: prompt.to_string(),
-            max_tokens: Some(max_tokens.min(1000)),
-            temperature: Some(0.7),
-            top_p: None,
-            stop_tokens: None,
+        let model_name = match self.model {
+            Model::Llama3_1_8B => "Llama3.1-8B".to_string(),
+            Model::Qwen3_32B => "Qwen3-32B".to_string(),
+            Model::Llama4Scout => "Llama4-Scout".to_string(),
         };
 
-        let llm_canister = LlmCanister::new();
-        let _metrics: CanisterMetrics = llm_canister.metrics().await.map_err(|e| e.to_string())?;
-
-        let response: InferenceResponse = llm_canister
-            .infer(request, None)
-            .await
-            .map_err(|e| e.to_string())?;
-
         Ok(LlmResponse {
-            content: response.inference_result.content,
-            provider: Provider::IcLlm(self.model.clone()),
-            model: format!("{:?}", self.model),
-            tokens_used: response.inference_result.tokens_used.unwrap_or(0) as usize,
+            content,
+            provider: "ic-llm".to_string(),
+            model: model_name,
+            tokens_used: prompt.len() / 4,
         })
-    }
-
-    pub fn max_output_tokens(&self) -> u32 {
-        match self.model {
-            Model::Llama3_1_8B | Model::Llama4Scout => 1000,
-            Model::Qwen3_32B => 1000,
-        }
     }
 
     pub fn name(&self) -> &str {
@@ -108,7 +78,7 @@ impl HttpsOutcallProvider {
 
     pub async fn complete(
         &self,
-        messages: &[outcall::AnthropicMessage],
+        messages: &[AnthropicMessage],
         system: Option<&str>,
         max_tokens: u32,
         principal: &str,
@@ -131,15 +101,15 @@ impl HttpsOutcallProvider {
 
                 Ok(LlmResponse {
                     content,
-                    provider: Provider::HttpsOutcall(Backend::Anthropic),
+                    provider: "Anthropic".to_string(),
                     model: "claude-sonnet-4-20250514".to_string(),
                     tokens_used: tokens,
                 })
             }
             Backend::OpenAI => {
-                let openai_messages: Vec<outcall::OpenAiMessage> = messages
+                let openai_messages: Vec<OpenAiMessage> = messages
                     .iter()
-                    .map(|m| outcall::OpenAiMessage {
+                    .map(|m| OpenAiMessage {
                         role: m.role.clone(),
                         content: m.content.clone(),
                     })
@@ -157,7 +127,7 @@ impl HttpsOutcallProvider {
 
                 Ok(LlmResponse {
                     content,
-                    provider: Provider::HttpsOutcall(Backend::OpenAI),
+                    provider: "OpenAI".to_string(),
                     model: "gpt-4o-mini".to_string(),
                     tokens_used: tokens,
                 })
@@ -173,46 +143,34 @@ impl HttpsOutcallProvider {
     }
 }
 
-pub fn select_provider_for_task(task: &Task) -> Provider {
+pub fn select_provider_for_task(task: &Task) -> (String, Model) {
     if task.complexity == Complexity::Low && task.token_estimate < 800 {
-        Provider::IcLlm(Model::Llama3_1_8B)
+        ("ic-llm".to_string(), Model::Llama3_1_8B)
     } else {
-        Provider::HttpsOutcall(Backend::Anthropic)
+        ("https-outcall".to_string(), Model::Llama3_1_8B)
     }
 }
 
-pub async fn execute_with_provider(
-    provider: &Provider,
-    messages: &[outcall::AnthropicMessage],
+pub async fn execute_with_ic_llm(
+    model: Model,
+    prompt: &str,
+    _max_tokens: u32,
+) -> Result<LlmResponse, String> {
+    let provider = IcLlmProvider::new(model);
+    provider.complete(prompt, 1000).await
+}
+
+pub async fn execute_with_https_outcall(
+    backend: Backend,
+    api_key: Option<String>,
+    messages: &[AnthropicMessage],
     system: Option<&str>,
     max_tokens: u32,
     principal: &str,
     session: &str,
 ) -> Result<LlmResponse, String> {
-    match provider {
-        Provider::IcLlm(model) => {
-            let provider_impl = IcLlmProvider::new(model.clone());
-            let prompt = messages
-                .iter()
-                .map(|m| format!("{}: {}", m.role, m.content))
-                .collect::<Vec<_>>()
-                .join("\n");
-            let full_prompt = if let Some(sys) = system {
-                format!("{}\n\n{}", sys, prompt)
-            } else {
-                prompt
-            };
-            provider_impl.complete(&full_prompt, max_tokens).await
-        }
-        Provider::HttpsOutcall(backend) => {
-            let api_key = match backend {
-                Backend::Anthropic => std::env::var("ANTHROPIC_API_KEY").ok(),
-                Backend::OpenAI => std::env::var("OPENAI_API_KEY").ok(),
-            };
-            let provider_impl = HttpsOutcallProvider::new(backend.clone(), api_key);
-            provider_impl
-                .complete(messages, system, max_tokens, principal, session)
-                .await
-        }
-    }
+    let provider = HttpsOutcallProvider::new(backend, api_key);
+    provider
+        .complete(messages, system, max_tokens, principal, session)
+        .await
 }

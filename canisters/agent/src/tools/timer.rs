@@ -5,7 +5,7 @@ use std::collections::HashMap;
 
 const COST: u64 = 2_000_000;
 
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, candid::CandidType)]
 pub struct ScheduledTask {
     pub id: String,
     pub cron_expr: String,

@@ -1,9 +1,10 @@
 use crate::tools::result::ToolResult;
-use ic_cdk::export::Principal;
+use candid::Principal;
+use serde::{Deserialize, Serialize};
 
 const COST: u64 = 10_000_000;
 
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Notification {
     pub message: String,
     pub recipient: Principal,
@@ -34,10 +35,11 @@ pub fn send_notification(message: &str) -> ToolResult {
         timestamp: ic_cdk::api::time(),
     };
 
+    let payload = serde_json::to_vec(&notification).unwrap_or_default();
     let _ = ic_cdk::notify(
         notification.recipient,
         "handle_notification",
-        &(serde_json::to_vec(&notification).unwrap_or_default()),
+        &(payload,),
     );
 
     ToolResult::ok("send_notification", "Notification sent", COST)

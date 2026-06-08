@@ -1,4 +1,4 @@
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, candid::CandidType)]
 pub struct ToolResult {
     pub name: String,
     pub success: bool,

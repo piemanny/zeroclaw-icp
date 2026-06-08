@@ -1,9 +1,5 @@
-use crate::transform::transform;
-use ic_cdk::api::call::HttpHeader;
-use ic_cdk::api::call::HttpRequest;
-use ic_cdk::api::call::HttpResponse;
+use ic_cdk::api::management_canister::http_request::{CanisterHttpRequestArgument, HttpHeader, HttpResponse};
 use sha2::{Digest, Sha256};
-use std::collections::HashMap;
 
 const ANTHROPIC_API_URL: &str = "https://api.anthropic.com/v1/messages";
 const OPENAI_API_URL: &str = "https://api.openai.com/v1/chat/completions";
@@ -24,6 +20,12 @@ pub fn check_cycles_balance() -> bool {
     balance >= MINIMUM_CYCLES_BALANCE
 }
 
+#[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
+pub struct AnthropicMessage {
+    pub role: String,
+    pub content: String,
+}
+
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct AnthropicRequest {
     pub model: String,
@@ -33,40 +35,34 @@ pub struct AnthropicRequest {
     pub system: Option<String>,
 }
 
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
-pub struct AnthropicMessage {
-    pub role: String,
-    pub content: String,
-}
-
 #[derive(Debug, serde::Deserialize)]
 pub struct AnthropicResponse {
     pub content: Vec<AnthropicContentBlock>,
     pub usage: AnthropicUsage,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, serde::Deserialize)]
 pub struct AnthropicContentBlock {
     pub text: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, serde::Deserialize)]
 pub struct AnthropicUsage {
     pub input_tokens: u32,
     pub output_tokens: u32,
 }
 
-#[derive(Debug, serde::Serialize, serde:: Deserialize)]
+#[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
+pub struct OpenAiMessage {
+    pub role: String,
+    pub content: String,
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct OpenAiRequest {
     pub model: String,
     pub messages: Vec<OpenAiMessage>,
     pub max_tokens: u32,
-}
-
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
-pub struct OpenAiMessage {
-    pub role: String,
-    pub content: String,
 }
 
 #[derive(Debug, serde::Deserialize)]
@@ -75,17 +71,17 @@ pub struct OpenAiResponse {
     pub usage: OpenAiUsage,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, serde::Deserialize)]
 pub struct OpenAiChoice {
     pub message: OpenAiMessageContent,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, serde::Deserialize)]
 pub struct OpenAiMessageContent {
     pub content: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, serde::Deserialize)]
 pub struct OpenAiUsage {
     pub prompt_tokens: u32,
     pub completion_tokens: u32,
@@ -104,7 +100,11 @@ pub async fn anthropic_completion(
         return Err("Insufficient cycles balance for HTTPS outcall".to_string());
     }
 
-    let idempotency_key = generate_idempotency_key(principal, session, &serde_json::to_string(messages).unwrap_or_default());
+    let idempotency_key = generate_idempotency_key(
+        principal,
+        session,
+        &serde_json::to_string(messages).unwrap_or_default(),
+    );
 
     let body = AnthropicRequest {
         model: model.to_string(),
@@ -134,22 +134,48 @@ pub async fn anthropic_completion(
         },
     ];
 
-    let request = HttpRequest {
+    let request = CanisterHttpRequestArgument {
         url: ANTHROPIC_API_URL.to_string(),
-        method: "POST".to_string(),
+        method: ic_cdk::api::management_canister::http_request::HttpMethod::POST,
         headers,
         body: Some(body_json.into_bytes()),
-        transform: Some("transform".to_string()),
+        transform: Some(ic_cdk::api::management_canister::http_request::TransformContext {
+            function: ic_cdk::api::management_canister::http_request::TransformFunc({
+                let func = |args: ic_cdk::api::management_canister::http_request::TransformArgs| {
+                    let response = args.response;
+                    let mut filtered_headers: Vec<HttpHeader> = Vec::new();
+                    let non_deterministic = [
+                        "x-request-id", "date", "cf-ray", "cf-cache-status",
+                        "x-ratelimit-limit", "x-ratelimit-remaining", "x-ratelimit-reset",
+                    ];
+                    for header in response.headers.iter() {
+                        let key_lower = header.name.to_lowercase();
+                        if !non_deterministic.contains(&key_lower.as_str()) {
+                            filtered_headers.push(header.clone());
+                        }
+                    }
+                    HttpResponse {
+                        status: response.status,
+                        headers: filtered_headers,
+                        body: response.body,
+                    }
+                };
+                func
+            }),
+            context: vec![],
+        }),
     };
 
-    let response: HttpResponse = ic_cdk::api::call::http_request(request, MAX_RESPONSE_BYTES)
-        .await
-        .map_err(|e| format!("HTTP request failed: {:?}", e))?;
+    let response: HttpResponse = ic_cdk::api::management_canister::http_request::http_request(
+        request,
+        MAX_RESPONSE_BYTES as u128,
+    )
+    .await
+    .map_err(|e| format!("HTTP request failed: {:?}", e))?
+    .0;
 
-    let transformed: HttpResponse = transform(response);
-
-    let parsed: AnthropicResponse = serde_json::from_slice(&transformed.body)
-        .map_err(|e| format!("Failed to parse response: {} - body: {:?}", e, String::from_utf8_lossy(&transformed.body)))?;
+    let parsed: AnthropicResponse = serde_json::from_slice(&response.body)
+        .map_err(|e| format!("Failed to parse response: {} - body: {:?}", e, String::from_utf8_lossy(&response.body)))?;
 
     let content = parsed
         .content
@@ -174,7 +200,11 @@ pub async fn openai_completion(
         return Err("Insufficient cycles balance for HTTPS outcall".to_string());
     }
 
-    let idempotency_key = generate_idempotency_key(principal, session, &serde_json::to_string(messages).unwrap_or_default());
+    let idempotency_key = generate_idempotency_key(
+        principal,
+        session,
+        &serde_json::to_string(messages).unwrap_or_default(),
+    );
 
     let body = OpenAiRequest {
         model: model.to_string(),
@@ -199,22 +229,24 @@ pub async fn openai_completion(
         },
     ];
 
-    let request = HttpRequest {
+    let request = CanisterHttpRequestArgument {
         url: OPENAI_API_URL.to_string(),
-        method: "POST".to_string(),
+        method: ic_cdk::api::management_canister::http_request::HttpMethod::POST,
         headers,
         body: Some(body_json.into_bytes()),
-        transform: Some("transform".to_string()),
+        transform: None,
     };
 
-    let response: HttpResponse = ic_cdk::api::call::http_request(request, MAX_RESPONSE_BYTES)
-        .await
-        .map_err(|e| format!("HTTP request failed: {:?}", e))?;
+    let response: HttpResponse = ic_cdk::api::management_canister::http_request::http_request(
+        request,
+        MAX_RESPONSE_BYTES as u128,
+    )
+    .await
+    .map_err(|e| format!("HTTP request failed: {:?}", e))?
+    .0;
 
-    let transformed: HttpResponse = transform(response);
-
-    let parsed: OpenAiResponse = serde_json::from_slice(&transformed.body)
-        .map_err(|e| format!("Failed to parse response: {} - body: {:?}", e, String::from_utf8_lossy(&transformed.body)))?;
+    let parsed: OpenAiResponse = serde_json::from_slice(&response.body)
+        .map_err(|e| format!("Failed to parse response: {} - body: {:?}", e, String::from_utf8_lossy(&response.body)))?;
 
     let content = parsed
         .choices

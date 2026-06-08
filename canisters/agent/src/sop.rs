@@ -1,14 +1,13 @@
 use ic_cdk::api::time;
-use ic_stable_structures::btree_map::BTreeMap;
-use ic_stable_structures::memory_manager::MemoryManager;
-use ic_stable_structures::memory_manager::VirtualMemory;
-use ic_stable_structures::{Storable, Memory};
+use ic_stable_structures::btreemap::BTreeMap;
+use ic_stable_structures::memory_manager::{MemoryId, MemoryManager, VirtualMemory};
+use ic_stable_structures::{DefaultMemoryImpl, Storable, storable::Bound};
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 
-type MemoryRegion = VirtualMemory<ic_cdk::api::memory::ICP_MEMORY>;
+type Memory = VirtualMemory<DefaultMemoryImpl>;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, candid::CandidType)]
 pub struct SopEntry {
     pub id: String,
     pub cron_expr: String,
@@ -33,35 +32,44 @@ impl Storable for SopEntry {
             description: String::new(),
         })
     }
+
+    const BOUND: Bound = Bound::Bounded {
+        max_size: 4000,
+        is_fixed_size: false,
+    };
 }
 
 struct State {
-    sops: BTreeMap<String, SopEntry, MemoryRegion>,
+    sops: BTreeMap<String, SopEntry, Memory>,
 }
 
 impl State {
-    fn new(memory: MemoryRegion) -> Self {
+    fn new(memory: Memory) -> Self {
         State {
-            sops: BTreeMap::new(memory),
+            sops: BTreeMap::init(memory),
         }
     }
 }
 
 thread_local! {
-    static SOP_STATE: ic_stable_structures::cell_ref::Cell<State> = {
-        let memory = ic_cdk::api::memory::ICP_MEMORY;
-        let mgr = MemoryManager::init(memory);
-        let mem = mgr.get(MemoryManager::MEMORY_ID);
-        ic_stable_structures::cell_ref::Cell::new(State::new(mem))
-    };
+    static SOP_STATE: std::cell::RefCell<Option<State>> = std::cell::RefCell::new(None);
+}
+
+pub fn init_state() {
+    let memory = ic_stable_structures::DefaultMemoryImpl::default();
+    let mgr = MemoryManager::init(memory);
+    let mem = mgr.get(MemoryId::new(1));
+    SOP_STATE.with(|s| {
+        *s.borrow_mut() = Some(State::new(mem));
+    });
 }
 
 pub fn with_state<R>(f: impl FnOnce(&State) -> R) -> R {
-    SOP_STATE.with(|s| f(s.borrow()))
+    SOP_STATE.with(|s| f(s.borrow().as_ref().expect("SOP state not initialized")))
 }
 
 pub fn with_state_mut<R>(f: impl FnOnce(&mut State) -> R) -> R {
-    SOP_STATE.with(|s| f(&mut *s.borrow_mut()))
+    SOP_STATE.with(|s| f(s.borrow_mut().as_mut().expect("SOP state not initialized")))
 }
 
 pub fn add_sop(id: String, cron_expr: String, prompt: String, description: String) -> Result<(), String> {

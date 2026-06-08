@@ -1,8 +1,7 @@
-use ic_cdk::api::call::HttpResponse;
+use ic_cdk::api::management_canister::http_request::HttpResponse;
 use std::collections::HashMap;
 
 const NON_DETERMINISTIC_HEADERS: &[&str] = &[
-    "x-request-id",
     "x-request-id",
     "date",
     "cf-ray",

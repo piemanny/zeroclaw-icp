@@ -1,5 +1,4 @@
-use ic_cdk::api::call::notify::notify;
-use ic_cdk::export::Principal;
+use candid::Principal;
 
 const MINIMUM_CYCLES_BALANCE: u128 = 500_000_000_000;
 const CRITICAL_CYCLES_BALANCE: u128 = 100_000_000_000;
@@ -54,7 +53,7 @@ pub fn should_use_degraded_mode() -> bool {
     matches!(mode, OperationalMode::Degraded | OperationalMode::Critical)
 }
 
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, candid::CandidType)]
 pub struct EconomicsStats {
     pub balance: u64,
     pub operational_mode: String,
@@ -73,12 +72,6 @@ pub fn get_stats() -> EconomicsStats {
         can_execute_outcall: can_outcall,
         estimated_cycles_per_day: 150_000_000_000,
     }
-}
-
-pub async fn notify_owner(message: &str, recipient: Principal) -> Result<(), String> {
-    let payload = format!("ZeroClaw Economics Alert: {}", message);
-    let _ = notify(recipient, "handle_notification", &(payload.as_bytes().to_vec())).map_err(|e| e.to_string())?;
-    Ok(())
 }
 
 pub fn format_balance(balance: u128) -> String {

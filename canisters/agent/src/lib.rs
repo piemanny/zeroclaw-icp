@@ -7,15 +7,15 @@ mod sop;
 mod tools;
 mod transform;
 
-use economics::{self, EconomicsStats, OperationalMode};
+use economics::{EconomicsStats, OperationalMode};
 use ic_cdk::api::time;
-use ic_cdk::timers::set_timer_interval;
-use ic_cdk::export::Principal;
-use memory::{self, Conversation, Message};
+use ic_cdk_timers::set_timer_interval;
+use candid::Principal;
+use memory::{Conversation, Message};
 use sop::SopEntry;
 use std::cell::RefCell;
 use std::time::Duration;
-use tools::{self, ToolResult};
+use tools::ToolResult;
 
 const TIMER_INTERVAL_SECS: u64 = 60;
 
@@ -49,9 +49,11 @@ fn tick_sop_queue() {
         let should_run = sop_entry.last_run == 0 || (now - sop_entry.last_run) >= interval;
 
         if should_run {
-            ic_cdk::spawn(async {
-                let conv_id = format!("sop-{}", sop_entry.id);
-                let _ = agent_loop::run_agent_turn(&conv_id, &sop_entry.prompt).await;
+            let sop_id = sop_entry.id.clone();
+            let sop_prompt = sop_entry.prompt.clone();
+            ic_cdk::spawn(async move {
+                let conv_id = format!("sop-{}", sop_id);
+                let _ = agent_loop::run_agent_turn(&conv_id, &sop_prompt).await;
             });
             sop::update_last_run(&sop_entry.id);
         }
@@ -64,10 +66,11 @@ fn tick_economics() {
     match mode {
         OperationalMode::Critical => {
             if let Some(owner) = OWNER_PRINCIPAL.with(|p| p.borrow().clone()) {
+                let msg = "CRITICAL: Cycles balance critically low".to_string();
                 let _ = ic_cdk::notify(
                     owner,
                     "handle_notification",
-                    &("CRITICAL: Cycles balance critically low".as_bytes().to_vec()),
+                    &(msg.into_bytes(),),
                 );
             }
         }
@@ -78,7 +81,7 @@ fn tick_economics() {
                 let _ = ic_cdk::notify(
                     owner,
                     "handle_notification",
-                    &(msg.as_bytes().to_vec()),
+                    &(msg.into_bytes(),),
                 );
             }
         }
@@ -114,6 +117,8 @@ fn init() {
     OWNER_PRINCIPAL.with(|p| {
         *p.borrow_mut() = Some(get_caller());
     });
+    memory::init_state();
+    sop::init_state();
     start_timers();
 }
 
@@ -129,6 +134,8 @@ fn post_upgrade() {
             *p.borrow_mut() = Some(get_caller());
         });
     }
+    memory::init_state();
+    sop::init_state();
     TIMER_RUNNING.with(|t| *t.borrow_mut() = false);
     start_timers();
 }
@@ -194,11 +201,10 @@ fn set_default_conversation(conversation_id: String) -> Result<(), String> {
 }
 
 #[ic_cdk::update]
-fn clear_history(conversation_id: String) -> Result<(), String> {
+fn clear_history(_conversation_id: String) -> Result<(), String> {
     if !is_controller() {
         return Err("Only controller can clear history".to_string());
     }
-    let _ = memory::list_conversations();
     Ok(())
 }
 
@@ -288,7 +294,7 @@ fn get_transform_func_name() -> String {
     "transform".to_string()
 }
 
-#[ic_cdk::query]
+#[ic_cdk::update]
 fn handle_notification(payload: Vec<u8>) -> Result<(), String> {
     let _msg = String::from_utf8(payload).map_err(|e| e.to_string())?;
     Ok(())

@@ -1,16 +1,15 @@
-use ic_stable_structures::btree_map::BTreeMap;
-use ic_stable_structures::memory_manager::MemoryManager;
-use ic_stable_structures::memory_manager::VirtualMemory;
-use ic_stable_structures::{Storable, Memory};
+use ic_stable_structures::btreemap::BTreeMap;
+use ic_stable_structures::memory_manager::{MemoryId, MemoryManager, VirtualMemory};
+use ic_stable_structures::{DefaultMemoryImpl, Storable, storable::Bound};
 use std::borrow::Cow;
 
-type MemoryRegion = VirtualMemory<ic_cdk::api::memory::ICP_MEMORY>;
+type Memory = VirtualMemory<DefaultMemoryImpl>;
 
 const MAX_MESSAGE_SIZE: u32 = 8000;
 const MAX_CONVERSATIONS: u32 = 100;
 const MAX_MESSAGES_PER_CONV: u32 = 1000;
 
-#[derive(Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, serde::Serialize, serde::Deserialize, candid::CandidType)]
 pub struct Message {
     pub role: String,
     pub content: String,
@@ -29,9 +28,14 @@ impl Storable for Message {
             timestamp: 0,
         })
     }
+
+    const BOUND: Bound = Bound::Bounded {
+        max_size: MAX_MESSAGE_SIZE,
+        is_fixed_size: false,
+    };
 }
 
-#[derive(Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, serde::Serialize, serde::Deserialize, candid::CandidType)]
 pub struct Conversation {
     pub id: String,
     pub messages: Vec<Message>,
@@ -52,44 +56,49 @@ impl Storable for Conversation {
             updated_at: 0,
         })
     }
+
+    const BOUND: Bound = Bound::Bounded {
+        max_size: MAX_MESSAGE_SIZE * 10,
+        is_fixed_size: false,
+    };
 }
 
 struct State {
-    conversations: BTreeMap<String, Conversation, MemoryRegion>,
-    message_buffers: BTreeMap<String, Vec<Message>, MemoryRegion>,
-    kv_store: BTreeMap<String, String, MemoryRegion>,
+    conversations: BTreeMap<String, Conversation, Memory>,
+    kv_store: BTreeMap<String, String, Memory>,
 }
 
 impl State {
-    fn new(memory: MemoryRegion) -> Self {
+    fn new(memory: Memory) -> Self {
         State {
-            conversations: BTreeMap::new(memory.clone()),
-            message_buffers: BTreeMap::new(memory.clone()),
-            kv_store: BTreeMap::new(memory),
+            conversations: BTreeMap::init(memory.clone()),
+            kv_store: BTreeMap::init(memory),
         }
     }
 }
 
 thread_local! {
-    static MEMORY_MANAGER: MemoryManager<MemoryRegion> =
-        MemoryManager::init(ic_cdk::api::memory::ICP_MEMORY);
+    static MEMORY_MANAGER: std::cell::RefCell<MemoryManager<DefaultMemoryImpl>> =
+        std::cell::RefCell::new(MemoryManager::init(DefaultMemoryImpl::default()));
 
-    static STATE: ic_stable_structures::cell_ref::Cell<State> = {
-        let memory = MEMORY_MANAGER.with(|m| m.get(MemoryManager::MEMORY_ID));
-        ic_stable_structures::cell_ref::Cell::new(State::new(memory))
-    };
+    static STATE: std::cell::RefCell<Option<State>> = std::cell::RefCell::new(None);
 }
 
-pub fn with_memory<R>(f: impl FnOnce(&MemoryRegion) -> R) -> R {
-    MEMORY_MANAGER.with(|m| f(&m.get(MemoryManager::MEMORY_ID)))
+pub fn init_state() {
+    MEMORY_MANAGER.with(|m| {
+        let mem = m.borrow().get(MemoryId::new(0));
+        STATE.with(|s| {
+            *s.borrow_mut() = Some(State::new(mem));
+        });
+    });
 }
 
 pub fn with_state<R>(f: impl FnOnce(&State) -> R) -> R {
-    STATE.with(|s| f(s.borrow()))
+    STATE.with(|s| f(s.borrow().as_ref().expect("State not initialized")))
 }
 
 pub fn with_state_mut<R>(f: impl FnOnce(&mut State) -> R) -> R {
-    STATE.with(|s| f(&mut *s.borrow_mut()))
+    STATE.with(|s| f(s.borrow_mut().as_mut().expect("State not initialized")))
 }
 
 pub fn add_message(conversation_id: &str, role: &str, content: &str) {
