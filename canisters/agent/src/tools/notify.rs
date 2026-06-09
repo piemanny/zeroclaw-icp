@@ -31,16 +31,14 @@ pub fn send_notification(message: &str) -> ToolResult {
 
     let notification = Notification {
         message: message.to_string(),
-        recipient: owner.unwrap_or_else(ic_cdk::api::caller),
+        recipient: owner.unwrap_or_else(ic_cdk::api::msg_caller),
         timestamp: ic_cdk::api::time(),
     };
 
     let payload = serde_json::to_vec(&notification).unwrap_or_default();
-    let _ = ic_cdk::notify(
-        notification.recipient,
-        "handle_notification",
-        (payload,),
-    );
+    let _ = ic_cdk::call::Call::unbounded_wait(notification.recipient, "handle_notification")
+        .with_arg(&(payload,))
+        .oneway();
 
     ToolResult::ok("send_notification", "Notification sent", COST)
 }

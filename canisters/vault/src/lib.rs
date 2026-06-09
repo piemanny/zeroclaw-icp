@@ -1,5 +1,5 @@
 use candid::Principal;
-use ic_cdk::caller;
+use ic_cdk::api::msg_caller;
 use ic_stable_structures::btreemap::BTreeMap;
 use ic_stable_structures::memory_manager::{MemoryId, MemoryManager, VirtualMemory};
 use ic_stable_structures::{DefaultMemoryImpl, Storable, storable::Bound};
@@ -25,6 +25,10 @@ impl Storable for KeyEntry {
         Cow::Owned(serde_json::to_vec(self).unwrap_or_default())
     }
 
+    fn into_bytes(self) -> Vec<u8> {
+        serde_json::to_vec(&self).unwrap_or_default()
+    }
+
     fn from_bytes(bytes: Cow<'_, [u8]>) -> Self {
         serde_json::from_slice(&bytes).unwrap_or(KeyEntry { value: vec![] })
     }
@@ -41,7 +45,7 @@ impl State {
         State {
             keys: BTreeMap::init(memory),
             agent_principal: None,
-            controller: caller(),
+            controller: msg_caller(),
         }
     }
 }
@@ -61,11 +65,11 @@ fn with_state_mut<R>(f: impl FnOnce(&mut State) -> R) -> R {
 }
 
 fn is_controller() -> bool {
-    caller() == with_state(|s| s.controller)
+    msg_caller() == with_state(|s| s.controller)
 }
 
 fn is_agent() -> bool {
-    with_state(|s| s.agent_principal.map(|p| p == caller()).unwrap_or(false))
+    with_state(|s| s.agent_principal.map(|p| p == msg_caller()).unwrap_or(false))
 }
 
 fn is_authorized() -> bool {

@@ -8,7 +8,7 @@ static SESSION_COUNTER: AtomicU64 = AtomicU64::new(0);
 
 fn next_session_id() -> String {
     let count = SESSION_COUNTER.fetch_add(1, Ordering::Relaxed);
-    let principal = ic_cdk::api::caller().to_string();
+    let principal = ic_cdk::api::msg_caller().to_string();
     format!("{}-{}", principal, count)
 }
 
@@ -61,7 +61,7 @@ pub async fn run_single_turn(
     user_message: &str,
 ) -> Result<String, String> {
     let session_id = next_session_id();
-    let principal = ic_cdk::api::caller().to_string();
+    let principal = ic_cdk::api::msg_caller().to_string();
 
     memory::add_message(conversation_id, "user", user_message);
 
@@ -114,7 +114,7 @@ pub async fn run_agent_turn(
     user_message: &str,
 ) -> Result<AgentResponse, String> {
     let session_id = next_session_id();
-    let principal = ic_cdk::api::caller().to_string();
+    let principal = ic_cdk::api::msg_caller().to_string();
 
     memory::add_message(conversation_id, "user", user_message);
 

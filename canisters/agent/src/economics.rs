@@ -1,5 +1,3 @@
-use candid::Principal;
-
 const MINIMUM_CYCLES_BALANCE: u128 = 500_000_000_000;
 const CRITICAL_CYCLES_BALANCE: u128 = 100_000_000_000;
 const DEGRADED_MODE_THRESHOLD: u128 = 200_000_000_000;
@@ -12,7 +10,7 @@ pub enum OperationalMode {
 }
 
 pub fn get_operational_mode() -> OperationalMode {
-    let balance = ic_cdk::api::canister_balance128();
+    let balance = ic_cdk::api::canister_cycle_balance();
 
     if balance < CRITICAL_CYCLES_BALANCE as u128 {
         OperationalMode::Critical
@@ -24,16 +22,16 @@ pub fn get_operational_mode() -> OperationalMode {
 }
 
 pub fn check_balance_for_outcall() -> bool {
-    let balance = ic_cdk::api::canister_balance128();
+    let balance = ic_cdk::api::canister_cycle_balance();
     balance >= MINIMUM_CYCLES_BALANCE
 }
 
 pub fn get_balance_u128() -> u128 {
-    ic_cdk::api::canister_balance128()
+    ic_cdk::api::canister_cycle_balance()
 }
 
 pub fn get_balance_nat64() -> u64 {
-    let balance = ic_cdk::api::canister_balance128();
+    let balance = ic_cdk::api::canister_cycle_balance();
     balance as u64
 }
 

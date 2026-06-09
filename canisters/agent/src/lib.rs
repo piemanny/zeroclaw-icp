@@ -31,7 +31,7 @@ fn get_controller() -> Option<Principal> {
 }
 
 fn get_caller() -> Principal {
-    ic_cdk::api::caller()
+    ic_cdk::api::msg_caller()
 }
 
 fn is_controller() -> bool {
@@ -40,7 +40,7 @@ fn is_controller() -> bool {
         .unwrap_or(false)
 }
 
-fn tick_sop_queue() {
+async fn tick_sop_queue_async() {
     let enabled_sops = sop::get_enabled_sops();
     let now = time();
 
@@ -51,7 +51,7 @@ fn tick_sop_queue() {
         if should_run {
             let sop_id = sop_entry.id.clone();
             let sop_prompt = sop_entry.prompt.clone();
-            ic_cdk::spawn(async move {
+            ic_cdk::futures::spawn(async move {
                 let conv_id = format!("sop-{}", sop_id);
                 let _ = agent_loop::run_agent_turn(&conv_id, &sop_prompt).await;
             });
@@ -60,33 +60,37 @@ fn tick_sop_queue() {
     }
 }
 
-fn tick_economics() {
+fn tick_sop_queue() {
+    ic_cdk::futures::spawn(tick_sop_queue_async());
+}
+
+async fn tick_economics_async() {
     let mode = economics::get_operational_mode();
 
     match mode {
         OperationalMode::Critical => {
             if let Some(owner) = OWNER_PRINCIPAL.with(|p| p.borrow().clone()) {
                 let msg = "CRITICAL: Cycles balance critically low".to_string();
-                let _ = ic_cdk::notify(
-                    owner,
-                    "handle_notification",
-                    (msg.into_bytes(),),
-                );
+                let _ = ic_cdk::call::Call::unbounded_wait(owner, "handle_notification")
+                    .with_arg(&(msg.into_bytes(),))
+                    .oneway();
             }
         }
         OperationalMode::Degraded => {
             if let Some(owner) = OWNER_PRINCIPAL.with(|p| p.borrow().clone()) {
                 let balance = economics::format_balance(economics::get_balance_u128());
                 let msg = format!("WARNING: Running in degraded mode. Balance: {}", balance);
-                let _ = ic_cdk::notify(
-                    owner,
-                    "handle_notification",
-                    (msg.into_bytes(),),
-                );
+                let _ = ic_cdk::call::Call::unbounded_wait(owner, "handle_notification")
+                    .with_arg(&(msg.into_bytes(),))
+                    .oneway();
             }
         }
         OperationalMode::Full => {}
     }
+}
+
+fn tick_economics() {
+    ic_cdk::futures::spawn(tick_economics_async());
 }
 
 fn start_timers() {
@@ -95,11 +99,11 @@ fn start_timers() {
         return;
     }
 
-    set_timer_interval(Duration::from_secs(TIMER_INTERVAL_SECS), || {
+    set_timer_interval(Duration::from_secs(TIMER_INTERVAL_SECS), || async {
         tick_sop_queue();
     });
 
-    set_timer_interval(Duration::from_secs(3600), || {
+    set_timer_interval(Duration::from_secs(3600), || async {
         tick_economics();
     });
 
@@ -140,6 +144,8 @@ fn post_upgrade() {
     start_timers();
 }
 
+use agent_loop::run_agent_turn;
+
 #[ic_cdk::update]
 async fn chat(message: String) -> Result<String, String> {
     let conv_id = DEFAULT_CONVERSATION_ID.with(|id| id.borrow().clone());
@@ -150,8 +156,6 @@ async fn chat(message: String) -> Result<String, String> {
 async fn chat_in_conversation(conversation_id: String, message: String) -> Result<String, String> {
     run_agent_turn(&conversation_id, &message).await.map(|r| r.content)
 }
-
-use agent_loop::run_agent_turn;
 
 #[ic_cdk::query]
 fn get_history(limit: u32) -> Vec<Message> {

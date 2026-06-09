@@ -1,6 +1,6 @@
-use ic_cdk::api::management_canister::http_request::HttpResponse;
+use ic_cdk_management_canister::{HttpRequestResult, TransformArgs};
 
-pub fn transform(response: HttpResponse) -> HttpResponse {
+pub fn transform(args: TransformArgs) -> HttpRequestResult {
     let non_deterministic = [
         "x-request-id",
         "date",
@@ -19,6 +19,8 @@ pub fn transform(response: HttpResponse) -> HttpResponse {
         "x-edge",
     ];
 
+    let response = args.response;
+
     let filtered_headers: Vec<_> = response
         .headers
         .into_iter()
@@ -28,7 +30,7 @@ pub fn transform(response: HttpResponse) -> HttpResponse {
         })
         .collect();
 
-    HttpResponse {
+    HttpRequestResult {
         status: response.status,
         headers: filtered_headers,
         body: response.body,

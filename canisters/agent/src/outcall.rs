@@ -1,10 +1,12 @@
-use ic_cdk::api::management_canister::http_request::{CanisterHttpRequestArgument, HttpHeader, HttpResponse, HttpMethod};
+use ic_cdk_management_canister::{HttpHeader, HttpMethod, HttpRequestArgs};
 use sha2::{Digest, Sha256};
 
 const ANTHROPIC_API_URL: &str = "https://api.anthropic.com/v1/messages";
 const OPENAI_API_URL: &str = "https://api.openai.com/v1/chat/completions";
 const MAX_RESPONSE_BYTES: u64 = 10_240;
 const MINIMUM_CYCLES_BALANCE: u128 = 500_000_000_000;
+
+const CYCLES_PER_HTTP_OUTCALL: u128 = 20_000_000_000;
 
 pub fn generate_idempotency_key(principal: &str, session: &str, message: &str) -> String {
     let mut hasher = Sha256::new();
@@ -16,7 +18,7 @@ pub fn generate_idempotency_key(principal: &str, session: &str, message: &str) -
 }
 
 pub fn check_cycles_balance() -> bool {
-    let balance = ic_cdk::api::canister_balance128();
+    let balance = ic_cdk::api::canister_cycle_balance();
     balance >= MINIMUM_CYCLES_BALANCE
 }
 
@@ -134,26 +136,37 @@ pub async fn anthropic_completion(
         },
     ];
 
-    let request = CanisterHttpRequestArgument {
+    let request = HttpRequestArgs {
         url: ANTHROPIC_API_URL.to_string(),
         method: HttpMethod::POST,
         headers,
         body: Some(body_json.into_bytes()),
         max_response_bytes: Some(MAX_RESPONSE_BYTES),
         transform: None,
-        ..Default::default()
+        is_replicated: Some(false),
     };
 
-    let response: HttpResponse = ic_cdk::api::management_canister::http_request::http_request(
-        request,
-        MAX_RESPONSE_BYTES as u128,
-    )
-    .await
-    .map_err(|e| format!("HTTP request failed: {:?}", e))?
-    .0;
+    let response = ic_cdk_management_canister::http_request(&request)
+        .await
+        .map_err(|e| format!("HTTP request failed: {:?}", e))?;
+
+    if response.status != candid::Nat::from(200u32) {
+        let status = response.status;
+        let body_preview = String::from_utf8_lossy(&response.body).chars().take(200).collect::<String>();
+        return Err(format!(
+            "HTTP request returned non-200 status: {}. Body: {}",
+            status, body_preview
+        ));
+    }
 
     let parsed: AnthropicResponse = serde_json::from_slice(&response.body)
-        .map_err(|e| format!("Failed to parse response: {} - body: {:?}", e, String::from_utf8_lossy(&response.body)))?;
+        .map_err(|e| {
+            format!(
+                "Failed to parse response: {} - body: {:?}",
+                e,
+                String::from_utf8_lossy(&response.body)
+            )
+        })?;
 
     let content = parsed
         .content
@@ -207,26 +220,37 @@ pub async fn openai_completion(
         },
     ];
 
-    let request = CanisterHttpRequestArgument {
+    let request = HttpRequestArgs {
         url: OPENAI_API_URL.to_string(),
         method: HttpMethod::POST,
         headers,
         body: Some(body_json.into_bytes()),
         max_response_bytes: Some(MAX_RESPONSE_BYTES),
         transform: None,
-        ..Default::default()
+        is_replicated: Some(false),
     };
 
-    let response: HttpResponse = ic_cdk::api::management_canister::http_request::http_request(
-        request,
-        MAX_RESPONSE_BYTES as u128,
-    )
-    .await
-    .map_err(|e| format!("HTTP request failed: {:?}", e))?
-    .0;
+    let response = ic_cdk_management_canister::http_request(&request)
+        .await
+        .map_err(|e| format!("HTTP request failed: {:?}", e))?;
+
+    if response.status != candid::Nat::from(200u32) {
+        let status = response.status;
+        let body_preview = String::from_utf8_lossy(&response.body).chars().take(200).collect::<String>();
+        return Err(format!(
+            "HTTP request returned non-200 status: {}. Body: {}",
+            status, body_preview
+        ));
+    }
 
     let parsed: OpenAiResponse = serde_json::from_slice(&response.body)
-        .map_err(|e| format!("Failed to parse response: {} - body: {:?}", e, String::from_utf8_lossy(&response.body)))?;
+        .map_err(|e| {
+            format!(
+                "Failed to parse response: {} - body: {:?}",
+                e,
+                String::from_utf8_lossy(&response.body)
+            )
+        })?;
 
     let content = parsed
         .choices
@@ -241,8 +265,8 @@ pub async fn openai_completion(
 
 pub fn estimate_cost(tokens: usize, provider: &str) -> u64 {
     match provider {
-        "anthropic" => (490_000_000u64).saturating_add((tokens as u64).saturating_mul(100_000)),
-        "openai" => (450_000_000u64).saturating_add((tokens as u64).saturating_mul(100_000)),
-        _ => 500_000_000,
+        "anthropic" => (CYCLES_PER_HTTP_OUTCALL as u64).saturating_add((tokens as u64).saturating_mul(100_000)),
+        "openai" => (CYCLES_PER_HTTP_OUTCALL as u64).saturating_add((tokens as u64).saturating_mul(100_000)),
+        _ => CYCLES_PER_HTTP_OUTCALL as u64,
     }
 }

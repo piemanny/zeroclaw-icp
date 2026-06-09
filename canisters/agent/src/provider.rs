@@ -1,5 +1,4 @@
 use crate::outcall::{anthropic_completion, openai_completion, AnthropicMessage, OpenAiMessage};
-use ic_llm::Model;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -31,6 +30,13 @@ pub struct LlmResponse {
     pub tokens_used: usize,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum Model {
+    Llama3_1_8B,
+    Qwen3_32B,
+    Llama4Scout,
+}
+
 pub struct IcLlmProvider {
     model: Model,
 }
@@ -47,20 +53,10 @@ impl IcLlmProvider {
             Model::Llama4Scout => "Llama4-Scout".to_string(),
         };
 
-        let model_for_prompt = match self.model {
-            Model::Llama3_1_8B => Model::Llama3_1_8B,
-            Model::Qwen3_32B => Model::Qwen3_32B,
-            Model::Llama4Scout => Model::Llama4Scout,
-        };
-
-        let content = ic_llm::prompt(model_for_prompt, prompt).await;
-
-        Ok(LlmResponse {
-            content,
-            provider: "ic-llm".to_string(),
-            model: model_name,
-            tokens_used: prompt.len() / 4,
-        })
+        Err(format!(
+            "On-chain LLM inference is not available. Please use HttpsOutcallProvider with an API key. Model: {}",
+            model_name
+        ))
     }
 
     pub fn name(&self) -> String {

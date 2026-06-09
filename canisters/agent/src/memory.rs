@@ -21,6 +21,10 @@ impl Storable for Message {
         Cow::Owned(serde_json::to_vec(self).unwrap_or_default())
     }
 
+    fn into_bytes(self) -> Vec<u8> {
+        serde_json::to_vec(&self).unwrap_or_default()
+    }
+
     fn from_bytes(bytes: Cow<'_, [u8]>) -> Self {
         serde_json::from_slice(&bytes).unwrap_or(Message {
             role: "user".to_string(),
@@ -46,6 +50,10 @@ pub struct Conversation {
 impl Storable for Conversation {
     fn to_bytes(&self) -> Cow<'_, [u8]> {
         Cow::Owned(serde_json::to_vec(self).unwrap_or_default())
+    }
+
+    fn into_bytes(self) -> Vec<u8> {
+        serde_json::to_vec(&self).unwrap_or_default()
     }
 
     fn from_bytes(bytes: Cow<'_, [u8]>) -> Self {
