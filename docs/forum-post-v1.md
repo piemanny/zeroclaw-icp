@@ -1,6 +1,6 @@
 ---
 
-**Title: ZeroClaw ICP — Building Self-Sovereign AI Agents That Can't Be Shut Down**
+**Title: ZeroClaw, But It Just Works Forever**
 
 ---
 
@@ -13,6 +13,20 @@ You can run an AI agent on your own PC or server today. But then you're faced wi
 **Option B**: Maintain it yourself. Your agent dies when your machine goes offline.
 
 Neither is acceptable for an agent that's supposed to work while you sleep.
+
+---
+
+**The Vision: ZeroClaw, But It Just Works Forever**
+
+ZeroClaw is a great AI agent runtime. It runs on your machine, works beautifully, does what it says.
+
+But what if it just... kept working? Forever? Without you? Without a server? Without you even thinking about it?
+
+That's what we're building.
+
+The same ZeroClaw experience — but underneath, it runs on the Internet Computer. It can't be shut down. It pays for its own hosting. It survives everything.
+
+Users don't know ICP exists. They just know their agent has been running for 2 years without them touching it. And when they find out how... that's when minds get blown.
 
 ---
 
@@ -29,38 +43,21 @@ No translation from Python/JS. No wrapper libraries. Just Rust on Rust.
 
 ---
 
-**The Vision: Self-Sovereign AI Agents**
-
-We believe AI agents will eventually be as common as websites or apps. When that happens, people will face a choice:
-
-**Option 1**: Rent agents from corporations that own your data, control access, and can revoke service whenever they want.
-
-**Option 2**: Self-host on your own VPS. You control everything — but uptime is your problem, maintenance is your problem, and if your server goes down, your agent goes down.
-
-**Option 3**: Own agents that run on-chain, can't be taken away, continue working even when you're offline, and belong to you — with economics that force them to deliver value or die.
-
-We're building Option 3.
-
-The goal is **completely self-sovereign agents** — agents that are:
-- Censorship resistant (no single entity can shut them down)
-- Financially autonomous (they manage their own economy)
-- Self-sustaining (they pay for their own survival)
-
-The vision is to leverage decentralized web3 infrastructure to achieve this. The specific providers and protocols mentioned in our research are illustrative examples of the kind of services we *could* integrate with — not a commitment to any particular platform. Our aim is to identify the most robust path to fully censorship-resistant, self-sovereign agents.
-
----
-
 **Why It Must Pay to Survive**
 
-An agent funded once with operating capital. That earns revenue from real clients. That pays its own compute costs from those earnings. That stops working if it can't cover its bills.
+An agent that funds itself. That earns enough to keep running. That dies if it can't.
 
-This is a living business entity. Not a chatbot. It either earns its keep or it dies. No subscription to manage. No account to cancel.
+Not because we're cruel — because that's what makes it real. If an agent can't sustain itself, it's just a toy. If it can, it's a business.
+
+Fund it once. It earns. It pays its bills. It survives.
+
+This is the difference between "a chatbot someone built" and "an entity that exists because it provides value."
 
 ---
 
 **What We've Built**
 
-ZeroClaw ICP is a Rust-based AI agent runtime for the Internet Computer.
+ZeroClaw ICP ports the ZeroClaw agent runtime to the Internet Computer. Same Rust codebase, same patterns — but now running as canisters.
 
 Stack:
 - ic-cdk 0.17
@@ -75,7 +72,7 @@ Currently deployed:
 - Vault canister for secure key storage
 - Chat UI matching ZeroClaw's dark theme
 
-Local testnet works. Testnet deployment ready for API keys.
+Local testnet works. From the user's perspective... it just works.
 
 ---
 
@@ -99,4 +96,4 @@ This isn't a thought experiment. It's a roadmap for what web3 infrastructure was
 - Clone it, run `dfx deploy --network local`, chat with the agent
 - Open issues, submit PRs, or DM to talk strategy
 
-The self-sovereign AI agent that can't be shut down is coming. We're building it now.
+The agent that just works, forever, without you thinking about it — is coming. We're building it now.
