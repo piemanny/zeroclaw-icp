@@ -53,11 +53,11 @@ This is the difference between "a chatbot someone built" and "an entity that exi
 
 ## What Makes This Different
 
-Most "AI agents on blockchain" projects are smart contracts that call an LLM API.
-ZeroClaw ICP combines five ICP primitives that, together, produce something genuinely new:
-
-Most "AI agents on blockchain" projects are smart contracts that call an LLM API.
-ZeroClaw ICP combines five ICP primitives that, together, produce something genuinely new:
+Most "AI agents on blockchain" projects are normal off-chain agents with a token
+associated — the token and the chain have nothing to do with how the agent operates.
+ZeroClaw ICP is different: the agent *is* the canister, running on-chain with no
+off-chain dependencies, combining five ICP primitives that produce something
+genuinely new:
 
 | Primitive | What it Enables |
 |---|---|
