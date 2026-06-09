@@ -97,7 +97,7 @@ service : {
 
     send_notification : (message : text) -> (ToolResult);
 
-    set_owner_principal : (principal : principal) -> (Result : variant { Ok : null; Err : text });
+    set_owner_principal : (owner : principal) -> (Result : variant { Ok : null; Err : text });
 
     whoami : () -> (principal) query;
 
