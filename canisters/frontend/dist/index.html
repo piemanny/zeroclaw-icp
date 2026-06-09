@@ -1,12 +1,293 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ZeroClaw ICP</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+    <style>
+        :root {
+            --color-status-success: #00e68a;
+            --color-status-warning: #ffaa00;
+            --color-status-error: #ff4466;
+            --color-status-info: #0080ff;
+            --pc-bg-base: #1e1e24;
+            --pc-bg-surface: #232329;
+            --pc-bg-elevated: #27272a;
+            --pc-bg-input: #1a1a20;
+            --pc-border: rgba(255, 255, 255, 0.08);
+            --pc-border-strong: rgba(255, 255, 255, 0.1);
+            --pc-text-primary: #d4d4d8;
+            --pc-text-secondary: #a1a1aa;
+            --pc-text-muted: #71717a;
+            --pc-text-faint: #52525b;
+            --pc-accent: #22d3ee;
+            --pc-accent-light: #67e8f9;
+            --pc-accent-dim: rgba(34, 211, 238, 0.3);
+            --pc-accent-glow: rgba(34, 211, 238, 0.1);
+            --pc-font-ui: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            --pc-font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Monaco, Consolas, monospace;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; scrollbar-width: thin; scrollbar-color: var(--pc-text-faint) var(--pc-bg-elevated); }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--pc-text-faint); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--pc-text-muted); }
+
+        body {
+            font-family: var(--pc-font-ui);
+            background-color: var(--pc-bg-base);
+            color: var(--pc-text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .header {
+            background: var(--pc-bg-surface);
+            border-bottom: 1px solid var(--pc-border);
+            padding: 0.75rem 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .header-left { display: flex; align-items: center; gap: 0.75rem; }
+        .logo { font-size: 1.5rem; }
+        .header h1 { font-size: 1.125rem; font-weight: 600; background: linear-gradient(135deg, #0080ff, #00d4ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+        .status-connected { background: var(--color-status-success); box-shadow: 0 0 6px var(--color-status-success); }
+        .status-disconnected { background: var(--color-status-error); box-shadow: 0 0 6px var(--color-status-error); }
+        .status-typing { background: var(--pc-accent); box-shadow: 0 0 6px var(--pc-accent); animation: pulse 1.5s infinite; }
+
+        .chat-container { flex: 1; display: flex; flex-direction: column; max-width: 900px; margin: 0 auto; width: 100%; padding: 0; }
+        .messages { flex: 1; overflow-y: auto; padding: 1.5rem 1rem; display: flex; flex-direction: column; gap: 1rem; }
+
+        .message { display: flex; gap: 0.75rem; max-width: 80%; animation: slideIn 0.3s ease-out; }
+        .message.user { flex-direction: row-reverse; align-self: flex-end; }
+        .message.assistant { align-self: flex-start; }
+        .message.error { align-self: flex-start; }
+
+        .message-avatar { width: 36px; height: 36px; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 1.25rem; }
+        .message.user .message-avatar { background: var(--pc-accent); }
+        .message.assistant .message-avatar { background: var(--pc-bg-elevated); border: 1px solid var(--pc-border); }
+        .message.error .message-avatar { background: rgba(255, 68, 102, 0.1); border: 1px solid rgba(255, 68, 102, 0.2); }
+
+        .message-bubble { padding: 0.875rem 1rem; border-radius: 16px; border: 1px solid; line-height: 1.5; font-size: 0.9375rem; }
+        .message.user .message-bubble { background: var(--pc-accent-glow); border-color: var(--pc-accent-dim); color: var(--pc-text-primary); border-bottom-right-radius: 4px; }
+        .message.assistant .message-bubble { background: var(--pc-bg-elevated); border-color: var(--pc-border); color: var(--pc-text-primary); border-bottom-left-radius: 4px; }
+        .message.error .message-bubble { background: rgba(255, 68, 102, 0.08); border-color: rgba(255, 68, 102, 0.2); color: #f87171; }
+
+        .message-bubble pre { background: var(--pc-bg-input); border: 1px solid var(--pc-border); border-radius: 8px; padding: 0.75rem; margin: 0.5rem 0; overflow-x: auto; font-family: var(--pc-font-mono); font-size: 0.8125rem; }
+        .message-bubble code { background: var(--pc-accent-glow); padding: 2px 6px; border-radius: 4px; font-family: var(--pc-font-mono); font-size: 0.875em; }
+        .message-bubble pre code { background: transparent; padding: 0; }
+        .message-bubble p { margin: 0.25rem 0; }
+        .message-bubble p:first-child { margin-top: 0; }
+        .message-bubble p:last-child { margin-bottom: 0; }
+
+        .typing-indicator { display: flex; gap: 0.375rem; padding: 0.875rem 1rem; }
+        .typing-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--pc-accent); animation: bounce 0.9s infinite ease-in-out; }
+        .typing-dot:nth-child(1) { animation-delay: 0s; }
+        .typing-dot:nth-child(2) { animation-delay: 0.12s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.24s; }
+
+        .input-area { padding: 1rem; background: var(--pc-bg-surface); border-top: 1px solid var(--pc-border); }
+        .input-wrapper { display: flex; gap: 0.75rem; max-width: 900px; margin: 0 auto; }
+        .input-wrapper textarea { flex: 1; background: var(--pc-bg-input); border: 1px solid var(--pc-border); border-radius: 12px; padding: 0.75rem 1rem; color: var(--pc-text-primary); font-family: var(--pc-font-ui); font-size: 0.9375rem; resize: none; min-height: 48px; max-height: 200px; }
+        .input-wrapper textarea:focus { outline: none; border-color: var(--pc-accent-dim); box-shadow: 0 0 0 3px var(--pc-accent-glow); }
+        .input-wrapper textarea::placeholder { color: var(--pc-text-muted); }
+        .send-btn { background: var(--pc-accent); color: white; border: none; border-radius: 12px; width: 48px; height: 48px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: opacity 0.2s; flex-shrink: 0; }
+        .send-btn:hover:not(:disabled) { opacity: 0.9; }
+        .send-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+        .connection-status { display: flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.5rem; font-size: 0.75rem; color: var(--pc-text-muted); }
+
+        .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; text-align: center; color: var(--pc-text-muted); }
+        .empty-state-icon { width: 64px; height: 64px; border-radius: 24px; background: var(--pc-accent-glow); display: flex; align-items: center; justify-content: center; font-size: 2rem; margin-bottom: 1rem; animation: float 3s ease-in-out infinite; }
+        .empty-state h2 { font-size: 1.125rem; color: var(--pc-text-primary); margin-bottom: 0.25rem; }
+        .empty-state p { font-size: 0.875rem; }
+
+        @keyframes slideIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes bounce { 0%, 80%, 100% { transform: translateY(0); opacity: 0.45; } 40% { transform: translateY(-4px); opacity: 1; } }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+        @keyframes float { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-4px); } }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-left">
+            <span class="logo">🦀</span>
+            <h1>ZeroClaw ICP</h1>
+        </div>
+        <div class="header-right">
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <div class="status-dot" id="statusDot"></div>
+                <span id="statusText" style="font-size: 0.75rem; color: var(--pc-text-muted);">Connecting...</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="chat-container">
+        <div class="messages" id="messages">
+            <div class="empty-state" id="emptyState">
+                <div class="empty-state-icon">🤖</div>
+                <h2>ZeroClaw Agent</h2>
+                <p>Type a message below to start chatting</p>
+            </div>
+        </div>
+        <div class="connection-status" id="connectionStatus"></div>
+    </div>
+
+    <div class="input-area">
+        <div class="input-wrapper">
+            <textarea id="input" rows="1" placeholder="Type your message..." onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault();send()}"></textarea>
+            <button class="send-btn" id="sendBtn" onclick="send()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="22" y1="2" x2="11" y2="13"></line>
+                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { Actor, HttpAgent } from 'https://cdn.jsdelivr.net/npm/@dfinity/agent@0.21.0/+esm';
+
+        const CANISTER_ID = 'uxrrr-q7777-77774-qaaaq-cai';
+        const HOST = 'http://127.0.0.1:35009';
+
+        let agent;
+        let actor;
+        let connected = false;
+        let typing = false;
+
+        const messagesEl = document.getElementById('messages');
+        const emptyState = document.getElementById('emptyState');
+        const inputEl = document.getElementById('input');
+        const sendBtn = document.getElementById('sendBtn');
+        const statusDot = document.getElementById('statusDot');
+        const statusText = document.getElementById('statusText');
+
+        function setStatus(state) {
+            statusDot.className = 'status-dot';
+            if (state === 'connected') {
+                statusDot.classList.add('status-connected');
+                statusText.textContent = 'Connected';
+            } else if (state === 'typing') {
+                statusDot.classList.add('status-typing');
+                statusText.textContent = 'Thinking...';
+            } else {
+                statusDot.classList.add('status-disconnected');
+                statusText.textContent = 'Disconnected';
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function renderMarkdown(text) {
+            let html = escapeHtml(text);
+            html = html.replace(/```(\w*)\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>');
+            html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+            html = html.replace(/\n/g, '<br>');
+            return html;
+        }
+
+        function addMessage(role, content) {
+            if (emptyState) emptyState.style.display = 'none';
+
+            const div = document.createElement('div');
+            div.className = `message ${role}`;
+
+            const avatar = role === 'user' ? '👤' : role === 'error' ? '⚠️' : '🤖';
+
+            div.innerHTML = `
+                <div class="message-avatar">${avatar}</div>
+                <div class="message-bubble">${role === 'user' ? escapeHtml(content) : renderMarkdown(content)}</div>
+            `;
+
+            messagesEl.appendChild(div);
+            messagesEl.scrollTop = messagesEl.scrollHeight;
+        }
+
+        function showTyping() {
+            const div = document.createElement('div');
+            div.className = 'message assistant';
+            div.id = 'typingIndicator';
+            div.innerHTML = `
+                <div class="message-avatar">🤖</div>
+                <div class="message-bubble typing-indicator">
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                </div>
+            `;
+            messagesEl.appendChild(div);
+            messagesEl.scrollTop = messagesEl.scrollHeight;
+        }
+
+        function hideTyping() {
+            const typing = document.getElementById('typingIndicator');
+            if (typing) typing.remove();
+        }
+
+        async function init() {
+            try {
+                agent = new HttpAgent({ host: HOST });
+                const idlFactory = ({ IDL }) => IDL.Service({
+                    whoami: IDL.Func([], [IDL.Principal], ['query']),
+                    cycles_balance: IDL.Func([], [IDL.Nat], ['query']),
+                    chat: IDL.Func([IDL.Text], [IDL.Text], []),
+                    get_history: IDL.Func([IDL.Nat], [IDL.Vec(IDL.Record({
+                        role: IDL.String,
+                        content: IDL.Text,
+                        timestamp: IDL.Nat64
+                    }))], ['query']),
+                });
+                actor = Actor.createActor(idlFactory, { agent, canisterId: CANISTER_ID });
+
+                const who = await actor.whoami();
+                connected = true;
+                setStatus('connected');
+                addMessage('assistant', 'Hello! I am ZeroClaw, an AI agent running on the Internet Computer blockchain. I can help you with various tasks using LLM integration. Type a message to start chatting!');
+            } catch (err) {
+                connected = false;
+                setStatus('disconnected');
+                addMessage('error', 'Failed to connect to canister. Make sure dfx is running on port 35009.');
+            }
+        }
+
+        async function send() {
+            const message = inputEl.value.trim();
+            if (!message || !connected) return;
+
+            inputEl.value = '';
+            sendBtn.disabled = true;
+            setStatus('typing');
+            showTyping();
+
+            addMessage('user', message);
+
+            try {
+                hideTyping();
+                const response = await actor.chat(message);
+                addMessage('assistant', response);
+                setStatus('connected');
+            } catch (err) {
+                hideTyping();
+                addMessage('error', 'Error: ' + err.message);
+                setStatus('connected');
+            }
+
+            sendBtn.disabled = false;
+            inputEl.focus();
+        }
+
+        window.send = send;
+        init();
+    </script>
+</body>
 </html>
