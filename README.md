@@ -55,9 +55,8 @@ This is the difference between "a chatbot someone built" and "an entity that exi
 
 Most "AI agents on blockchain" projects are normal off-chain agents with a token
 associated — the token and the chain have nothing to do with how the agent operates.
-ZeroClaw ICP is different: the agent *is* the canister, running on-chain with no
-off-chain dependencies, combining five ICP primitives that produce something
-genuinely new:
+ZeroClaw ICP is different: the agent *is* the canister, its "body" is running on-chain,
+ combining five ICP primitives that produce something genuinely new:
 
 | Primitive | What it Enables |
 |---|---|
