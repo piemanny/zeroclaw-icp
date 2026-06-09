@@ -11,15 +11,49 @@ Deploy AI agents on the Internet Computer that run forever — no server, no VPS
 
 ---
 
-> **ZeroClaw ICP** is a framework for deploying the ZeroClaw agent model onto the
-> Internet Computer Protocol. Your agent lives in a canister — permanent,
-> cryptographically owned by you, waking itself on schedule, holding its own
-> encrypted credentials, and capable of earning ICP to fund its own operation.
-> No cloud account. No subscription. No infrastructure to manage.
+## The Problem
+
+You can run an AI agent on your own PC or server today. But then you're faced with a choice:
+
+**Option A**: Pay for cloud hosting to guarantee uptime. You're back to renting someone else's infrastructure.
+
+**Option B**: Maintain it yourself. Your agent dies when your machine goes offline.
+
+Neither is acceptable for an agent that's supposed to work while you sleep.
 
 ---
 
-## What makes this different
+## The Vision: Self-Sovereign AI Agents
+
+We believe AI agents will eventually be as common as websites or apps. When that happens, people will face a choice:
+
+**Option 1**: Rent agents from corporations that own your data, control access, and can revoke service whenever they want.
+
+**Option 2**: Self-host on your own VPS. You control everything — but uptime is your problem, maintenance is your problem, and if your server goes down, your agent goes down.
+
+**Option 3**: Own agents that run on-chain, can't be taken away, continue working even when you're offline, and belong to you — with economics that force them to deliver value or die.
+
+**We're building Option 3.**
+
+The goal is **completely self-sovereign agents** — agents that are:
+- **Censorship resistant** — no single entity can shut them down
+- **Financially autonomous** — they manage their own economy
+- **Self-sustaining** — they pay for their own survival
+
+---
+
+## Why It Must Pay to Survive
+
+An agent funded once with operating capital. That earns revenue from real clients. That pays its own compute costs from those earnings. That stops working if it can't cover its bills.
+
+This is a living business entity. Not a chatbot. It either earns its keep or it dies. No subscription to manage. No account to cancel.
+
+---
+
+## What Makes This Different
+
+Most "AI agents on blockchain" projects are smart contracts that call an LLM API.
+ZeroClaw ICP combines five ICP primitives that, together, produce something genuinely new:
 
 Most "AI agents on blockchain" projects are smart contracts that call an LLM API.
 ZeroClaw ICP combines five ICP primitives that, together, produce something genuinely new:
@@ -241,12 +275,29 @@ The trait boundaries in this framework (`Provider`, `Memory`, `Tool`) are design
 ## Roadmap
 
 - [x] **v0.1.0** — Vault + Agent core + local deployment working
-- [ ] **v0.2.0** — HTTPS outcall providers (Anthropic, OpenAI) + transform functions
-- [ ] **v0.3.0** — Timer-based SOP/cron system + stable memory persistence
-- [ ] **v0.4.0** — Frontend with Internet Identity auth + chat UI
+- [x] **v0.2.0** — HTTPS outcall providers (Anthropic, OpenAI) + transform functions
+- [x] **v0.3.0** — Timer-based SOP/cron system + stable memory persistence
+- [x] **v0.4.0** — Frontend with chat UI
 - [ ] **v0.5.0** — Economics module: cycles balance checks, degraded mode, notification hooks
-- [ ] **v0.6.0** — Factory canister: one-click multi-agent deployment
-- [ ] **v1.0.0** — Mainnet stable, full docs, cycles estimator tool
+- [ ] **v0.6.0** — Decentralized AI integration (Bittensor, Akash, Render Network)
+- [ ] **v0.7.0** — ICP chainfusion for cross-chain payments
+- [ ] **v1.0.0** — Mainnet stable, full docs, autonomous business agents
+
+---
+
+## The Path Forward: Decentralized Infrastructure
+
+The vision extends beyond ICP alone. We aim to build on decentralized infrastructure to achieve true self-sovereignty:
+
+- **ICP** — The body. Hosts the agent runtime, canister state, and financial rails via chainfusion
+- **Bittensor** — The brain. Decentralized, censorship-resistant AI models
+- **Akash Network** — The blood flow. Decentralized GPU compute
+- **Render Network** — GPU rendering and generative AI workloads
+- **ICP chainfusion** — The financial system. Agents that send, receive, and manage their own funds
+
+The specific providers and protocols in our research are illustrative examples of the kind of services we *could* integrate with — not a commitment to any particular platform. Our aim is to identify the most robust path to fully censorship-resistant, self-sovereign agents.
+
+See [docs/decentralized-infrastructure-analysis.md](docs/decentralized-infrastructure-analysis.md) for our research on integration complexity.
 
 ---
 
