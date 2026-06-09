@@ -23,30 +23,31 @@ Neither is acceptable for an agent that's supposed to work while you sleep.
 
 ---
 
-## The Vision: Self-Sovereign AI Agents
+## The Vision: ZeroClaw, But It Just Works Forever
 
-We believe AI agents will eventually be as common as websites or apps. When that happens, people will face a choice:
+ZeroClaw is a great AI agent runtime. It runs on your machine, works beautifully, and does what it says.
 
-**Option 1**: Rent agents from corporations that own your data, control access, and can revoke service whenever they want.
+But what if it just... kept working? Forever? Without you? Without a server? Without you even thinking about it?
 
-**Option 2**: Self-host on your own VPS. You control everything — but uptime is your problem, maintenance is your problem, and if your server goes down, your agent goes down.
+That's what we're building.
 
-**Option 3**: Own agents that run on-chain, can't be taken away, continue working even when you're offline, and belong to you — with economics that force them to deliver value or die.
+The same ZeroClaw experience — but underneath, it runs on the Internet Computer. It can't be shut down. It pays for its own hosting. It survives everything.
 
-**We're building Option 3.**
+Users don't know ICP exists. They just know their agent has been running for 2 years without them touching it. And when they find out how... that's when minds get blown.
 
-The goal is **completely self-sovereign agents** — agents that are:
-- **Censorship resistant** — no single entity can shut them down
-- **Financially autonomous** — they manage their own economy
-- **Self-sustaining** — they pay for their own survival
+The goal is **zero friction, infinite permanence**.
 
 ---
 
 ## Why It Must Pay to Survive
 
-An agent funded once with operating capital. That earns revenue from real clients. That pays its own compute costs from those earnings. That stops working if it can't cover its bills.
+An agent that funds itself. That earns enough to keep running. That dies if it can't.
 
-This is a living business entity. Not a chatbot. It either earns its keep or it dies. No subscription to manage. No account to cancel.
+Not because we're cruel — because that's what makes it real. If an agent can't sustain itself, it's just a toy. If it can, it's a business.
+
+Fund it once. It earns. It pays its bills. It survives.
+
+This is the difference between "a chatbot someone built" and "an entity that exists because it provides value."
 
 ---
 
