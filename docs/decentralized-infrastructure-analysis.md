@@ -126,24 +126,46 @@ Realistic timeline for Akash compute integration: **1-3 months**.
 
 ---
 
-## Render (For Reference)
+## Render Network
 
-**What it is:** Centralized cloud hosting platform. Not decentralized.
+**What it is:** Decentralized GPU rendering platform backed by OTOY. Node operators provide GPU compute; clients pay with RNDL token. Supports OctaneRender, Redshift, Blender Cycles, and generative AI tools (Runway, Black Forest Labs, Luma Labs, Stability AI).
 
-Render is included in the original vision but does not fit the decentralization thesis. It provides:
-- Easy deployment
-- Autoscaling
-- Managed infrastructure
+**How it works:**
+1. Client submits rendering/AI workload
+2. Network matches with available GPU nodes
+3. Work executes, client pays in RNDL
+4. Node operators earn RNDL for providing GPU
 
-**Why it's not the answer:**
+**Technical Analysis:**
 
-Render can host your agent, but:
-- Render can shut it down (TOS, payment failure, etc.)
-- Single point of failure
-- You don't own the infrastructure
-- No financial rails for autonomous payments
+| Aspect | Details |
+|--------|---------|
+| SDK Language | Not yet researched |
+| Focus | GPU rendering + generative AI inference |
+| Integration Complexity | **Medium** (REST API expected) |
+| Payment | RNDL token |
 
-**Verdict:** Render is useful for traditional hosting but not relevant to the self-sovereign agent vision.
+**Possible Approaches:**
+
+1. **Agent pays for Render Network compute for AI inference**
+   - Agent converts ICP → RNDL via chainfusion (when available)
+   - Offloads GPU-intensive AI tasks to Render Network
+   - Results returned to agent canister
+
+2. **Hybrid with Akash**
+   - Use Akash for general GPU compute
+   - Use Render Network for specialized rendering/AI tasks
+   - Agent chooses cheapest/fastest option
+
+**The Catch:**
+
+Render Network's primary focus is rendering (3D graphics), not general AI inference. However, it does support generative AI tools. Whether it's suitable for ongoing AI agent workloads vs one-off rendering tasks is unclear without deeper research.
+
+**Reality Check:**
+
+Render Network is a mature decentralized GPU platform with real adoption. Integration would be valuable for GPU workloads but the payment rail (RNDL) requires chainfusion support from ICP.
+
+Realistic timeline for Render Network integration: **3-6 months** (waiting on chainfusion).
 
 ---
 
@@ -153,37 +175,16 @@ Render can host your agent, but:
 
 **Why it matters:**
 
-If agents need to pay for compute on Akash (ATOM) or interact with Bittensor (TAO), chainfusion could be the payment rail:
+If agents need to pay for compute on Akash (ATOM), Bittensor (TAO), or Render Network (RNDL), chainfusion could be the payment rail:
 - Agent receives payment in ICP
 - Converts to target chain token via chainfusion
 - Pays for decentralized services
 
 **Current Status:**
 - Chainfusion currently supports Bitcoin and Ethereum
-- Support for other chains (including chains used by Akash and Bittensor) is on the roadmap
+- Support for other chains (including chains used by Akash and Render Network) is on the roadmap
 
 **Timeline:** Chainfusion for arbitrary chains is not yet available. This is a blocker for the full vision.
-
----
-
-## Render (For Reference)
-
-**What it is:** Centralized cloud hosting platform. Not decentralized.
-
-Render is included in the original vision but does not fit the decentralization thesis. It provides:
-- Easy deployment
-- Autoscaling
-- Managed infrastructure
-
-**Why it's not the answer:**
-
-Render can host your agent, but:
-- Render can shut it down (TOS, payment failure, etc.)
-- Single point of failure
-- You don't own the infrastructure
-- No financial rails for autonomous payments
-
-**Verdict:** Render is useful for traditional hosting but not relevant to the self-sovereign agent vision.
 
 ---
 
@@ -193,7 +194,8 @@ Render can host your agent, but:
 |-----------|------------|----------|---------|
 | Bittensor (AI models) | High | 3-6 months | Python SDK, no Rust bindings |
 | Akash (GPU compute) | Medium-High | 1-3 months | Different deployment model |
-| Chainfusion (payments) | Medium | Roadmap | Not yet supporting ATOM/TAO |
+| Render Network (GPU) | Medium | 3-6 months | Chainfusion for RNDL needed |
+| Chainfusion (payments) | Medium | Roadmap | Not yet supporting ATOM/RNDL/TAO |
 | ICP canister (core) | Low | Done | None |
 
 ---
@@ -204,7 +206,7 @@ Render can host your agent, but:
 
 **Phase 2 (3-6 months):** Evaluate if Bittensor or a similar decentralized AI network has emerged with Rust-compatible APIs. The AI landscape is evolving fast — new providers may appear.
 
-**Phase 3 (6-12 months):** Add Akash integration for GPU workloads the agent pays for directly. Use chainfusion for cross-chain payments as support expands.
+**Phase 3 (6-12 months):** Add Akash and/or Render Network integration for GPU workloads the agent pays for directly. Use chainfusion for cross-chain payments as support expands.
 
 **The honest truth:**
 
@@ -216,6 +218,7 @@ The fully decentralized vision (ICP + Bittensor + Akash + chainfusion) is the ri
 
 - Bittensor Docs: https://docs.learnbittensor.org
 - Akash Network: https://akash.network
+- Render Network: https://rendernetwork.com
 - ICP Chainfusion: https://internetcomputer.org/docs/current/developer-docs/integrations/
 - ic-llm crate: Existing integration point for LLM providers
 
